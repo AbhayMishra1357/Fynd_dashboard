@@ -84,43 +84,61 @@ def create_app():
     # ---------- routes ----------
     @app.route("/", methods=["GET", "POST"])
     def user_dashboard():
-        if request.method == "POST":
-            try:
-                rating = int(request.form.get("rating", 5))
-            except Exception:
-                rating = 5
-            review = request.form.get("review", "").strip()
-            if not review:
-                return render_template("user.html", error="Please write a review.", saved=False)
+        # if request.method == "POST":
+        #     try:
+        #         rating = int(request.form.get("rating", 5))
+        #     except Exception:
+        #         rating = 5
+        #     review = request.form.get("review", "").strip()
+        #     if not review:
+        #         return render_template("user.html", error="Please write a review.", saved=False)
 
-            # --- Use sentiment-based module to generate reply/summary/recommendations ---
-            try:
-                result = generate_sentiment_reply(review, rating)
-                # Expecting result keys: reply, summary, recommendations (list), sentiment, model_info
-                ai_reply = result.get("reply", "").strip()
-                ai_summary = result.get("summary", "").strip()
-                recs = result.get("recommendations", [])
-                # store recommendations as a semicolon separated string for DB column
-                ai_recs = "; ".join(recs) if isinstance(recs, (list, tuple)) else str(recs)
-            except Exception as e:
-                # Fail-safe: if sentiment module errors, fallback to simple templated reply
-                app.logger.exception("Sentiment module error, falling back to default reply: %s", e)
-                ai_reply = "Thanks for your review. We have received your feedback."
-                ai_summary = review[:200]
-                ai_recs = "Log for review"
+        #     # --- Use sentiment-based module to generate reply/summary/recommendations ---
+        #     try:
+        #         result = generate_sentiment_reply(review, rating)
+        #         # Expecting result keys: reply, summary, recommendations (list), sentiment, model_info
+        #         ai_reply = result.get("reply", "").strip()
+        #         ai_summary = result.get("summary", "").strip()
+        #         recs = result.get("recommendations", [])
+        #         # store recommendations as a semicolon separated string for DB column
+        #         ai_recs = "; ".join(recs) if isinstance(recs, (list, tuple)) else str(recs)
+        #     except Exception as e:
+        #         # Fail-safe: if sentiment module errors, fallback to simple templated reply
+        #         app.logger.exception("Sentiment module error, falling back to default reply: %s", e)
+        #         ai_reply = "Thanks for your review. We have received your feedback."
+        #         ai_summary = review[:200]
+        #         ai_recs = "Log for review"
 
-            s = Submission(
-                rating=rating,
-                review=review,
-                ai_reply=ai_reply,
-                ai_summary=ai_summary,
-                ai_recommendations=ai_recs,
-            )
-            db.session.add(s)
-            db.session.commit()
-            return render_template("user.html", saved=True, reply=ai_reply, summary=ai_summary)
+        #     s = Submission(
+        #         rating=rating,
+        #         review=review,
+        #         ai_reply=ai_reply,
+        #         ai_summary=ai_summary,
+        #         ai_recommendations=ai_recs,
+        #     )
+        #     db.session.add(s)
+        #     db.session.commit()
+        #     return render_template("user.html", saved=True, reply=ai_reply, summary=ai_summary)
 
-        return render_template("user.html", saved=False)
+        # return render_template("user.html", saved=False)
+         try:
+            from sqlalchemy import text
+            # quick test query
+            result = db.session.execute(text("SELECT 1")).scalar()
+            return {
+                "status": "ok",
+                "message": "Database connected successfully",
+                "result": result,
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 200
+        except Exception as e:
+            app.logger.exception("DB test failed")
+            return {
+                "status": "error",
+                "message": "Database connection failed",
+                "error": str(e),
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 500
 
     # ----- basic auth for admin (kept for optional use) -----
     # read and normalize admin creds once, trim whitespace
