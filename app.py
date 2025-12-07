@@ -84,6 +84,23 @@ def create_app():
     # ---------- routes ----------
     @app.route("/", methods=["GET", "POST"])
     def user_dashboard():
+        
+            from sqlalchemy import text
+            # quick test query
+            result = db.session.execute(text("SELECT 1")).scalar()
+            return {
+                "status": "ok",
+                "message": "Database connected successfully",
+                "result": result,
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 200
+        
+            return {
+                "status": "error",
+                "message": "Database connection failed",
+                "error": str(e),
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 500
         # if request.method == "POST":
         #     try:
         #         rating = int(request.form.get("rating", 5))
@@ -121,24 +138,7 @@ def create_app():
         #     return render_template("user.html", saved=True, reply=ai_reply, summary=ai_summary)
 
         # return render_template("user.html", saved=False)
-         try:
-            from sqlalchemy import text
-            # quick test query
-            result = db.session.execute(text("SELECT 1")).scalar()
-            return {
-                "status": "ok",
-                "message": "Database connected successfully",
-                "result": result,
-                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
-            }, 200
-        except Exception as e:
-            app.logger.exception("DB test failed")
-            return {
-                "status": "error",
-                "message": "Database connection failed",
-                "error": str(e),
-                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
-            }, 500
+        
 
     # ----- basic auth for admin (kept for optional use) -----
     # read and normalize admin creds once, trim whitespace
