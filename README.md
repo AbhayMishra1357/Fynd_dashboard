@@ -66,25 +66,38 @@ The model runs instantly (fast inference) and does NOT rely on external APIs.
 ---
 
 ## 🗄️ Project Structure
-project/
+
+project-root/
 │
-├── app.py # Flask app factory
-├── models.py # SQLAlchemy models (Submission)
-├── sentiments.py # ML sentiment analysis module
-├── llm.py # AI reply generator wrapper
-├── create_tables.py # One-off table creation script
+├── app.py                       # Main Flask application factory
+├── models.py                    # SQLAlchemy ORM models (Submission table)
+├── sentiments.py                # ML sentiment analysis module (TF-IDF + Logistic Regression)
+├── llm.py                       # Wrapper to generate reply based on ML sentiment output
+├── create_tables.py             # One-time script to create tables on Render PostgreSQL
+│
+├── migrations/                  # Flask-Migrate directory (if using migrations)
+│   ├── env.py
+│   ├── alembic.ini
+│   ├── script.py.mako
+│   └── versions/                # Auto-generated migration files
 │
 ├── templates/
-│ ├── user.html # User UI
-│ └── admin.html # Admin Dashboard
+│   ├── user.html                # User dashboard UI
+│   └── admin.html               # Admin analytics + data export dashboard
 │
 ├── static/
-│ ├── css/ # CSS files
-│ └── js/ # Charts & AJAX functionality
+│   ├── css/
+│   │   └── styles.css           # Custom dashboard styling (Bootstrap extended)
+│   ├── js/
+│   │   └── charts.js            # JS for admin charts & analytics
+│   └── assets/                  # Any images/icons (optional)
 │
-├── requirements.txt
-├── Procfile
-└── README.md
+├── requirements.txt             # Python dependencies for Render + local
+├── Procfile                     # Gunicorn start command for Render deployment
+├── README.md                    # Documentation
+├── .env.example                 # Example environment variables (safe to commit)
+└── .gitignore                   # Git ignore rules
+
 
 ## 🤖 Sentiment Model Details
 The ML model is implemented in sentiments.py:
