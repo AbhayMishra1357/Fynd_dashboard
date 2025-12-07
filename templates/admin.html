@@ -1,0 +1,378 @@
+<!--&lt;!&ndash; templates/admin.html &ndash;&gt;-->
+<!--<!doctype html>-->
+<!--<html>-->
+<!--<head>-->
+<!--  <meta charset="utf-8">-->
+<!--  <title>Admin Dashboard</title>-->
+<!--  <script>-->
+<!--    async function fetchLatest(){-->
+<!--      const res = await fetch("/api/latest");-->
+<!--      const data = await res.json();-->
+<!--      const el = document.getElementById("list");-->
+<!--      el.innerHTML = "";-->
+<!--      data.forEach(s=>{-->
+<!--        const li = document.createElement("li");-->
+<!--        li.innerHTML = `<b>${s.rating}★</b> - ${s.review.slice(0,140)} ...<br><i>Summary:</i> ${s.ai_summary}<br><i>Recs:</i> ${s.ai_recommendations}<br><small>${s.created_at}</small>`;-->
+<!--        el.appendChild(li);-->
+<!--      });-->
+<!--    }-->
+<!--    setInterval(fetchLatest, 5000);-->
+<!--    window.onload = fetchLatest;-->
+<!--  </script>-->
+<!--</head>-->
+<!--<body>-->
+<!--  <h1>Admin Dashboard</h1>-->
+<!--  <p>Total submissions: {{ total }} | Avg rating: {{ avg }}</p>-->
+<!--  <ul id="list">-->
+<!--    {% for s in submissions %}-->
+<!--      <li>-->
+<!--        <b>{{ s.rating }}★</b> - {{ s.review[:140] }}...-->
+<!--        <div><small>{{ s.created_at }}</small></div>-->
+<!--      </li>-->
+<!--    {% endfor %}-->
+<!--  </ul>-->
+<!--</body>-->
+<!--</html>-->
+<!-- templates/admin.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Feedback Dashboard</title>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#f4f7fb; --card:#ffffff; --muted:#6b7280; --accent:#0f172a; --primary:#0ea5e9;
+      --radius:12px; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    }
+    body{background:var(--bg); margin:0; color:#0b1220}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    h1{margin:0;font-size:20px}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:18px;margin-bottom:16px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .muted{color:var(--muted);font-size:13px}
+    .stat{font-size:22px;font-weight:700}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--primary);color:white;padding:8px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn-secondary{background:#eef2ff;color:#111;padding:8px 12px;border-radius:10px;border:0}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left;font-size:14px}
+    th{background:#fbfdff;position:sticky;top:0}
+    .badge{padding:6px 8px;border-radius:999px;font-weight:600;font-size:12px;display:inline-block}
+    .pos{background:#ecfdf5;color:#166534}
+    .neu{background:#f8fafc;color:#475569}
+    .neg{background:#fff1f2;color:#991b1b}
+    .search-row{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .filters{display:flex;gap:8px;align-items:center}
+    @media (max-width:980px){.grid-3{grid-template-columns:1fr} .controls{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">ADM</div>
+        <div>
+          <h1>Feedback Admin</h1>
+          <div class="muted">Overview of submissions, sentiment, summaries, and actions</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="exportCsvBtn">Export CSV</button>
+        <button class="btn-secondary" id="toggleAuto">Auto-refresh: ON</button>
+      </div>
+    </header>
+
+    <!-- top analytics -->
+    <div class="card grid-3">
+      <div>
+        <div class="muted">Total Submissions</div>
+        <div class="stat" id="statTotal">0</div>
+      </div>
+      <div>
+        <div class="muted">Average Rating</div>
+        <div class="stat" id="statAvg">0</div>
+      </div>
+      <div>
+        <div class="muted">Latest Submission</div>
+        <div class="muted" id="statLatest">—</div>
+      </div>
+    </div>
+
+    <!-- charts -->
+    <div class="card" style="display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start">
+      <div>
+        <canvas id="sentimentPie" width="360" height="240"></canvas>
+      </div>
+      <div>
+        <canvas id="ratingsBar" width="800" height="240"></canvas>
+      </div>
+    </div>
+
+    <!-- table + controls -->
+    <div class="card">
+      <div class="search-row">
+        <input type="text" id="searchBox" placeholder="Search reviews or summaries..." style="flex:1;padding:10px;border-radius:8px;border:1px solid #e6e9ef"/>
+        <div class="filters">
+          <select id="filterSentiment" style="padding:8px;border-radius:8px;border:1px solid #e6e9ef">
+            <option value="">All sentiments</option>
+            <option value="positive">Positive</option>
+            <option value="neutral">Neutral</option>
+            <option value="negative">Negative</option>
+          </select>
+          <select id="perPage" style="padding:8px;border-radius:8px;border:1px solid #e6e9ef">
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="subTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Rating</th>
+              <th>Sentiment</th>
+              <th>Review</th>
+              <th>Summary</th>
+              <th>Recommendations</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- populated via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <div class="muted" id="showingText">Showing 0 rows</div>
+        <div>
+          <button class="btn-secondary" id="prevBtn">Prev</button>
+          <button class="btn" id="nextBtn">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <footer style="margin-top:20px;text-align:center" class="muted">Tip: Export collects current results as CSV for offline analysis.</footer>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const apiUrl = "/api/latest";
+    let data = []; // full dataset client-side
+    let autoRefresh = true;
+    let pollInterval = 5000;
+    let timerId = null;
+
+    function ratingToSentiment(r){
+      r = Number(r);
+      if(r >= 4) return "positive";
+      if(r == 3) return "neutral";
+      return "negative";
+    }
+
+    function truncate(s, n=140){
+      if(!s) return "";
+      return s.length > n ? s.slice(0,n) + "…" : s;
+    }
+
+    // ---------- Fetch & render ----------
+    async function fetchData(){
+      try{
+        const res = await fetch(apiUrl);
+        const json = await res.json();
+        // Ensure data sorted by created_at desc if available
+        data = json.sort((a,b) => (new Date(b.created_at) - new Date(a.created_at)));
+        renderDashboard();
+      }catch(e){
+        console.error("Fetch error", e);
+      }
+    }
+
+    // ---------- Charts ----------
+    let pieChart = null, barChart = null;
+    function updateCharts(){
+      const counts = {positive:0, neutral:0, negative:0};
+      const ratingCounts = {1:0,2:0,3:0,4:0,5:0};
+      data.forEach(d=>{
+        const s = ratingToSentiment(d.rating);
+        counts[s] = (counts[s] || 0) + 1;
+        ratingCounts[d.rating] = (ratingCounts[d.rating] || 0) + 1;
+      });
+      // pie
+      const pieCtx = document.getElementById('sentimentPie').getContext('2d');
+      const pieData = {
+        labels: ['Positive','Neutral','Negative'],
+        datasets: [{
+          data: [counts.positive, counts.neutral, counts.negative],
+          backgroundColor: ['#10b981','#94a3b8','#ef4444']
+        }]
+      };
+      if(pieChart) pieChart.destroy();
+      pieChart = new Chart(pieCtx, {type:'pie', data:pieData, options:{plugins:{legend:{position:'bottom'}}}});
+
+      // bar
+      const barCtx = document.getElementById('ratingsBar').getContext('2d');
+      const barData = {
+        labels: ['1','2','3','4','5'],
+        datasets: [{ label: 'Count', data: [ratingCounts[1],ratingCounts[2],ratingCounts[3],ratingCounts[4],ratingCounts[5]], backgroundColor:'#3b82f6' }]
+      };
+      if(barChart) barChart.destroy();
+      barChart = new Chart(barCtx, {type:'bar', data:barData, options:{scales:{y:{beginAtZero:true}}}});
+    }
+
+    // ---------- Table, search, pagination ----------
+    let page = 1, perPage = 10;
+    function applyFilters(){
+      const search = document.getElementById('searchBox').value.trim().toLowerCase();
+      const filter = document.getElementById('filterSentiment').value;
+      let filtered = data.slice();
+
+      if(filter){
+        filtered = filtered.filter(d => ratingToSentiment(d.rating) === filter);
+      }
+      if(search){
+        filtered = filtered.filter(d =>
+          (d.review && d.review.toLowerCase().includes(search)) ||
+          (d.ai_summary && d.ai_summary.toLowerCase().includes(search)) ||
+          (d.ai_recommendations && d.ai_recommendations.toLowerCase().includes(search))
+        );
+      }
+      return filtered;
+    }
+
+    function renderTable(){
+      const filtered = applyFilters();
+      const total = filtered.length;
+      const per = Number(document.getElementById('perPage').value);
+      perPage = per;
+      const totalPages = Math.max(1, Math.ceil(total / per));
+      if(page > totalPages) page = totalPages;
+      const start = (page-1)*per;
+      const pageRows = filtered.slice(start, start+per);
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = "";
+      pageRows.forEach((s, idx)=>{
+        const tr = document.createElement('tr');
+        const sentiment = ratingToSentiment(s.rating);
+        const badgeClass = sentiment === 'positive' ? 'pos' : (sentiment === 'neutral' ? 'neu' : 'neg');
+        tr.innerHTML = `
+          <td>${start + idx + 1}</td>
+          <td>${s.rating}★</td>
+          <td><span class="badge ${badgeClass}">${sentiment.toUpperCase()}</span></td>
+          <td title="${escapeHtml(s.review)}">${escapeHtml(truncate(s.review,180))}</td>
+          <td title="${escapeHtml(s.ai_summary || '')}">${escapeHtml(truncate(s.ai_summary || '',120))}</td>
+          <td title="${escapeHtml(s.ai_recommendations || '')}">${escapeHtml(truncate(s.ai_recommendations || '',110))}</td>
+          <td>${new Date(s.created_at).toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('statTotal').textContent = data.length;
+      const avg = data.length ? (data.reduce((a,b)=>a + Number(b.rating),0) / data.length).toFixed(2) : 0;
+      document.getElementById('statAvg').textContent = avg;
+      document.getElementById('statLatest').textContent = data.length ? new Date(data[0].created_at).toLocaleString() : '—';
+      document.getElementById('showingText').textContent = `Showing ${Math.min(total, (page-1)*per + 1)} to ${Math.min(total, page*per)} of ${total} results`;
+    }
+
+    function renderDashboard(){
+      updateCharts();
+      renderTable();
+    }
+
+    // ---------- Export CSV ----------
+    function escapeCsv(val){
+      if(val === null || val === undefined) return '';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    }
+
+    function exportCsv(){
+      const filtered = applyFilters();
+      const headers = ['id','rating','sentiment','review','ai_summary','ai_recommendations','created_at'];
+      const rows = filtered.map(r => {
+        const sentiment = ratingToSentiment(r.rating);
+        return [
+          r.id || '',
+          r.rating,
+          sentiment,
+          r.review || '',
+          r.ai_summary || '',
+          r.ai_recommendations || '',
+          r.created_at || ''
+        ].map(escapeCsv).join(',');
+      });
+      const csv = [headers.join(',')].concat(rows).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `submissions_export_${(new Date()).toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // ---------- helpers ----------
+    function escapeHtml(unsafe) {
+      if(!unsafe) return '';
+      return unsafe.replace(/[&<"'>]/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]); });
+    }
+
+    // ---------- Pagination controls ----------
+    document.getElementById('nextBtn').addEventListener('click', ()=>{
+      page++;
+      renderTable();
+    });
+    document.getElementById('prevBtn').addEventListener('click', ()=>{
+      if(page>1) page--;
+      renderTable();
+    });
+    document.getElementById('perPage').addEventListener('change', ()=>{
+      page = 1;
+      renderTable();
+    });
+
+    // filters
+    document.getElementById('filterSentiment').addEventListener('change', ()=>{
+      page = 1; renderTable();
+    });
+    document.getElementById('searchBox').addEventListener('input', ()=>{
+      page = 1; renderTable();
+    });
+
+    // export
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+    // auto-refresh toggle
+    document.getElementById('toggleAuto').addEventListener('click', (e)=>{
+      autoRefresh = !autoRefresh;
+      e.target.textContent = `Auto-refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+      if(autoRefresh) schedulePoll(); else clearInterval(timerId);
+    });
+
+    function schedulePoll(){
+      if(timerId) clearInterval(timerId);
+      timerId = setInterval(()=>{ fetchData(); }, pollInterval);
+    }
+
+    // Init
+    fetchData().then(()=>{ if(autoRefresh) schedulePoll(); });
+
+  </script>
+</body>
+</html>

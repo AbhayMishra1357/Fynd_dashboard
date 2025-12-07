@@ -1,0 +1,154 @@
+<!--&lt;!&ndash; templates/user.html &ndash;&gt;-->
+<!--<!doctype html>-->
+<!--<html>-->
+<!--<head>-->
+<!--  <meta charset="utf-8">-->
+<!--  <title>User Dashboard</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--  <h1>User Dashboard</h1>-->
+<!--  {% if error %}-->
+<!--    <div style="color:red">{{ error }}</div>-->
+<!--  {% endif %}-->
+<!--  <form method="post">-->
+<!--    <label>Rating:-->
+<!--      <select name="rating">-->
+<!--        <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>-->
+<!--      </select>-->
+<!--    </label><br><br>-->
+<!--    <textarea name="review" rows="6" cols="60" placeholder="Write your review..."></textarea><br>-->
+<!--    <button type="submit">Submit</button>-->
+<!--  </form>-->
+
+<!--  {% if saved %}-->
+<!--    <h2>AI Reply</h2>-->
+<!--    <div style="border:1px solid #ddd;padding:10px">{{ reply }}</div>-->
+<!--    <h3>Summary</h3>-->
+<!--    <div>{{ summary }}</div>-->
+<!--  {% endif %}-->
+
+<!--  <p><a href="/admin">Admin Dashboard</a> (requires auth)</p>-->
+<!--</body>-->
+<!--</html>-->
+<!-- templates/user.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User — Feedback</title>
+
+  <!-- Simple professional CSS (copy-paste — no external frameworks required) -->
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb; --success:#16a34a; --danger:#dc2626;
+      --radius:12px; --pad:18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{background:var(--bg); margin:0; color:#0f172a; -webkit-font-smoothing:antialiased}
+    .container{max-width:1100px;margin:28px auto;padding:0 20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:var(--pad);margin-bottom:18px}
+    form .row{display:flex;gap:12px;align-items:flex-start}
+    label{font-size:14px;color:var(--muted)}
+    select, textarea, input[type="text"]{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:8px;font-size:14px}
+    textarea{min-height:140px;resize:vertical}
+    .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .muted{color:var(--muted);font-size:13px}
+    .reply-box{border-left:4px solid #e6e9ef;padding:14px;border-radius:8px;background:#fbfdff}
+    .summary{font-style:italic;color:#374151}
+    .row-cols{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    @media (max-width:880px){.row-cols{grid-template-columns:1fr} .brand h1{font-size:18px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">FB</div>
+        <div>
+          <h1>User Feedback</h1>
+          <div class="muted">Submit feedback — we will reply automatically</div>
+        </div>
+      </div>
+      <div>
+        <a href="/admin" style="text-decoration:none"><button class="btn" type="button">Open Admin</button></a>
+      </div>
+    </header>
+
+    <div class="row-cols">
+      <div class="card">
+        <h3 style="margin-top:0">Share your experience</h3>
+
+        <form method="post" id="reviewForm">
+          <div style="margin-bottom:12px">
+            <label for="rating">Rating</label>
+            <select name="rating" id="rating">
+              <option value="5">5 — Excellent</option>
+              <option value="4">4 — Good</option>
+              <option value="3">3 — Okay</option>
+              <option value="2">2 — Poor</option>
+              <option value="1">1 — Terrible</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px">
+            <label for="review">Review</label>
+            <textarea id="review" name="review" placeholder="Write your review — be as specific as possible"></textarea>
+            <div class="muted" style="margin-top:8px">Tip: include device, steps to reproduce, or feature name for faster help.</div>
+          </div>
+
+          <div style="display:flex;gap:8px">
+            <button class="btn" type="submit">Submit</button>
+            <button class="btn" id="clearBtn" type="button" style="background:#64748b">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h4 style="margin:0 0 8px 0">Recent AI Reply</h4>
+          {% if saved %}
+            <div class="reply-box">
+              <div style="font-weight:600;color:#0f172a">AI Reply</div>
+              <div style="margin-top:8px">{{ reply }}</div>
+              <div style="margin-top:12px" class="summary"><strong>Summary:</strong> {{ summary }}</div>
+            </div>
+          {% else %}
+            <div class="muted">After you submit a review, the AI reply and summary will appear here.</div>
+          {% endif %}
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4 style="margin:0 0 8px 0">Quick Stats</h4>
+          <div class="muted">Your rating helps classify sentiment (>=4 positive, 3 neutral, <=2 negative).</div>
+          <div style="margin-top:10px;font-size:13px;color:#374151">We analyze sentiment & provide templated, safe replies.</div>
+        </div>
+
+      </aside>
+    </div>
+
+    <footer style="margin-top:20px;text-align:center" class="muted">Powered by your ML module — deterministic replies for small projects</footer>
+  </div>
+
+  <script>
+    // Optional: small client-side UX improvements
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      document.getElementById('review').value = '';
+      document.getElementById('rating').value = '5';
+    });
+
+    // Basic client-side validation to avoid empty submissions (server still validates)
+    document.getElementById('reviewForm').addEventListener('submit', function(e){
+      const txt = document.getElementById('review').value.trim();
+      if(txt.length < 5){
+        e.preventDefault();
+        alert('Please write a longer review (at least 5 characters).');
+      }
+    });
+  </script>
+</body>
+</html>
