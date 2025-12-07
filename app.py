@@ -8,7 +8,7 @@
             "status": "ok",
             "message": "Database connected successfully",
             "result": result,
-            "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            "db_url": app.config["SQLALCHEMY_DATABASE_URI"],  
         }, 200
 
     # if request.method == "POST":
