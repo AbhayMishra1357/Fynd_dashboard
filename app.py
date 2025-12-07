@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 load_dotenv()
 
 # import models
-from models import db, Submission
+from models import db, Submission   
 
 # Import the sentiment-based reply generator (sentiments.py must expose generate_reply)
 # Example: from sentiments import generate_reply
