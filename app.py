@@ -183,6 +183,26 @@ def create_app():
 
     return app
 
+    @app.route("/db-test")
+    def db_test():
+        try:
+            from sqlalchemy import text
+            # quick test query
+            result = db.session.execute(text("SELECT 1")).scalar()
+            return {
+                "status": "ok",
+                "message": "Database connected successfully",
+                "result": result,
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 200
+        except Exception as e:
+            app.logger.exception("DB test failed")
+            return {
+                "status": "error",
+                "message": "Database connection failed",
+                "error": str(e),
+                "db_url": app.config["SQLALCHEMY_DATABASE_URI"],
+            }, 500
 
 # Allow "python app.py" to run dev server
 if __name__ == "__main__":
